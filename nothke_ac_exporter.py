@@ -1,6 +1,7 @@
 bl_info = {
     "name": "AC Export",
     "category": "Object",
+    "blender": (2, 80, 0)
 }
 
 import bpy
@@ -10,22 +11,33 @@ from bpy.props import StringProperty
 
 # OPERATOR
 
-class ACExportOperator(bpy.types.Operator):
+def recurLayerCollection(layerColl, collName):
+    found = None
+    if (layerColl.name == collName):
+        return layerColl
+    for layer in layerColl.children:
+        found = recurLayerCollection(layer, collName)
+        if found:
+            return found
+
+class NOTHKE_OT_ACExport(bpy.types.Operator):
     """Tooltip"""
     bl_idname = "object.ac_export"
     bl_label = "AC Export"
     
-    layer = IntProperty(default=0)
-    filename = StringProperty(default='ac_export')
+    #layer: IntProperty(default=0)
+    collectionName: StringProperty(default='EXPORT')
+    filename: StringProperty(default='ac_export')
 
     #@classmethod
     #def poll(cls, context):
     #    return context.active_object is not None
-
+    
     def execute(self, context):
         #main(context, self.layer, self.filename)
 
-        layer = self.layer
+        #layer = self.layer
+        collectionName = self.collectionName
         filename = self.filename
 
         basedir = os.path.dirname(bpy.data.filepath)
@@ -37,15 +49,35 @@ class ACExportOperator(bpy.types.Operator):
             
         scene = bpy.context.scene
 
-        bpy.context.scene.layers[layer] = True
+        #bpy.context.scene.layers[layer] = True
+        #bpy.context.scene.collection[collectionName] = True #this!
+        #print('Found collection')
+        
         #bpy.ops.object.select_all(action='SELECT')
-        bpy.ops.object.select_by_layer(match='SHARED', extend=False, layers=layer+1)
+        #bpy.ops.object.select_by_layer(match='SHARED', extend=False, layers=layer+1) #this!
+        
+        # Deselect all
+        bpy.ops.object.select_all(action='DESELECT')
 
-        if not bpy.context.selected_objects:
-            raise Exception("No objects found in this layer")
+        # Find collection
+        lc = bpy.context.view_layer.layer_collection
+        layerColl = recurLayerCollection(lc, collectionName)
+        
+        if layerColl is None:
+            raise Exception("Collection " + collectionName + " doesn't exist!")
+            
+        print('Found collection: ' + layerColl.name)
+        bpy.context.view_layer.active_layer_collection = layerColl
+
+        # select all in collection
+        bpy.ops.object.select_same_collection(collection = collectionName)
+
+        #if not bpy.context.selected_objects:
+        #    raise Exception("No objects found in this layer")
 
         #unlink object data
-        bpy.ops.object.make_single_user(object=True, obdata=True, material=False, texture=False, animation=False)
+        bpy.ops.object.make_single_user(type='SELECTED_OBJECTS', object=True, obdata=True, material=False, animation=False)
+        print('Unlinked objects')
 
         selection = bpy.context.selected_objects
 
@@ -65,59 +97,65 @@ class ACExportOperator(bpy.types.Operator):
 
         #export
         bpy.ops.export_scene.fbx(
-            filepath=fpath + ".fbx", 
-            version='BIN7400',
-            global_scale=0.01,
-            apply_unit_scale=False,
-            use_selection=True,
-            object_types={'EMPTY', 'MESH', 'OTHER'})
+            filepath = fpath + ".fbx", 
+            #version = 'BIN7400',
+            use_active_collection = True,
+            #use_selection = True,
+            global_scale = 1,
+            apply_unit_scale = False,
+            apply_scale_options = 'FBX_SCALE_UNITS',
+            object_types = {'EMPTY', 'MESH', 'OTHER'})
 
-        print('Finished AC export to ' + fpath + ' for layer: ' + str(layer))
+        print('Finished AC export to ' + fpath + ' for collection: ' + collectionName)
 
-        #reload 
-        #bpy.ops.wm.revert_mainfile()
-
+        # auto reload?
 
         return {'FINISHED'}
 
 # UI PANEL
 
-class ACExportPanel(bpy.types.Panel):
+class NOTHKE_PT_ACExport(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "AC Exporter"
-    bl_idname = "OBJECT_PT_hello"
+    bl_idname = "NOTHKE_PT_ACExport"
     
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI' #'TOOLS'
     bl_category = 'AC Exporter'
 
     def draw(self, context):
         scene = context.scene
         layout = self.layout
 
+        #row = layout.row()
+        #row.prop(scene, 'acexport_layer')
+
         row = layout.row()
-        row.prop(scene, 'acexport_layer')
+        row.prop(scene, 'acexport_collectionName')
 
         row = layout.row()
         row.prop(scene, 'acexport_filename')
 
+        # export button, create operator
         row = layout.row()
         op = row.operator('object.ac_export', text='Export FBX')
-        op.layer = scene.acexport_layer
+        #op.layer = scene.acexport_layer
+        # set properties to operator values
+        op.collectionName = scene.acexport_collectionName
         op.filename = scene.acexport_filename
 
         row = layout.row()
-        row.label('Important:')
+        row.label(text = 'Important:')
 
         row = layout.row()
-        row.label('Save before pressing export')
+        row.label(text = 'Save before pressing export')
 
         row = layout.row()
-        row.label('Revert after export!')
+        row.label(text = 'Revert after export!')
 
 def register():
     
-    bpy.utils.register_class(ACExportOperator)
+    bpy.utils.register_class(NOTHKE_OT_ACExport)
     print('operator registered')
 
     # register properties
@@ -125,6 +163,11 @@ def register():
         name="Layer",
         description="Export all objects from this layer",
         default = 1)
+        
+    bpy.types.Scene.acexport_collectionName = bpy.props.StringProperty(
+        name="Collection",
+        description="Export all objects from this collection",
+        default='EXPORT')
 
     bpy.types.Scene.acexport_filename = bpy.props.StringProperty(
         name="Filename",
@@ -132,12 +175,12 @@ def register():
         default = 'ac_export')
     print('properties registered')
 
-    bpy.utils.register_class(ACExportPanel)
+    bpy.utils.register_class(NOTHKE_PT_ACExport)
     print('panel registered')
 
 def unregister():
-    bpy.utils.unregister_class(ACExportOperator)
-    bpy.utils.unregister_class(ACExportPanel)
+    bpy.utils.unregister_class(NOTHKE_OT_ACExport)
+    bpy.utils.unregister_class(NOTHKE_PT_ACExport)
     del bpy.types.Scene.acexport_layer
     del bpy.types.Scene.acexport_filename
 
