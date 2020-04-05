@@ -64,7 +64,7 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
         if not bpy.context.selected_objects:
             raise Exception("" + collectionName + " collection is empty!")
 
-        #unlink object data
+        # unlink object data
         bpy.ops.object.make_single_user(type='SELECTED_OBJECTS', object=True, obdata=True, material=False, animation=False)
         print('Unlinked objects')
 
@@ -72,17 +72,28 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
 
         #bpy.ops.object.convert(target='MESH') # not working! context is incorrect
 
-        #TODO: make sure all objects have materials
-        #for obj in selection:
-            #print(obj)
-        #    obj.select = True
-        #    scene.objects.active = obj
-        #    bpy.ops.object.convert(target='MESH')
+        # make sure all objects..
+        for ob in bpy.context.selected_editable_objects:
+            #ob.active_material_index = 0
+            #bpy.context.view_layer.objects.active = ob
+            #bpy.ops.object.material_slot_remove_unused()
 
-            #mesh = obj.data
-            
-            #if mesh:
-            #    print(len(mesh.vertices))
+            # ..have at least 1 material slot:
+            if not ob.material_slots:
+                raise Exception("Object " + ob.name + " has no materials!")
+
+            # .. have materials assigned to all slots
+            for slot in ob.material_slots:
+                if slot.material is None:
+                    raise Exception(ob.name + " has an empty slot without assigned material")
+
+        # make sure no meshes have more than 65535 vertices
+        for ob in bpy.context.selected_editable_objects:
+            if ob.type != "MESH":
+                raise Exception("Object " + ob.name + " is not a valid mesh")
+            #print("Verts: " + str(len(ob.data.vertices)))
+            if len(ob.data.vertices) > 65535:
+                raise Exception("Object " + ob.name + " has more than 65535 vertices")
 
         #export
         bpy.ops.export_scene.fbx(
