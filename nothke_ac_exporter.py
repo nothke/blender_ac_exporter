@@ -25,14 +25,9 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
     bl_idname = "object.ac_export"
     bl_label = "AC Export"
     
-    #layer: IntProperty(default=0)
     collectionName: StringProperty(default='EXPORT')
     filename: StringProperty(default='ac_export')
 
-    #@classmethod
-    #def poll(cls, context):
-    #    return context.active_object is not None
-    
     def execute(self, context):
         #main(context, self.layer, self.filename)
 
@@ -48,13 +43,6 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
         fpath = basedir + '/' + filename
             
         scene = bpy.context.scene
-
-        #bpy.context.scene.layers[layer] = True
-        #bpy.context.scene.collection[collectionName] = True #this!
-        #print('Found collection')
-        
-        #bpy.ops.object.select_all(action='SELECT')
-        #bpy.ops.object.select_by_layer(match='SHARED', extend=False, layers=layer+1) #this!
         
         # Deselect all
         bpy.ops.object.select_all(action='DESELECT')
@@ -72,8 +60,9 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
         # select all in collection
         bpy.ops.object.select_same_collection(collection = collectionName)
 
-        #if not bpy.context.selected_objects:
-        #    raise Exception("No objects found in this layer")
+        # check if objects exist
+        if not bpy.context.selected_objects:
+            raise Exception("" + collectionName + " collection is empty!")
 
         #unlink object data
         bpy.ops.object.make_single_user(type='SELECTED_OBJECTS', object=True, obdata=True, material=False, animation=False)
@@ -127,9 +116,6 @@ class NOTHKE_PT_ACExport(bpy.types.Panel):
         scene = context.scene
         layout = self.layout
 
-        #row = layout.row()
-        #row.prop(scene, 'acexport_layer')
-
         row = layout.row()
         row.prop(scene, 'acexport_collectionName')
 
@@ -139,7 +125,7 @@ class NOTHKE_PT_ACExport(bpy.types.Panel):
         # export button, create operator
         row = layout.row()
         op = row.operator('object.ac_export', text='Export FBX')
-        #op.layer = scene.acexport_layer
+
         # set properties to operator values
         op.collectionName = scene.acexport_collectionName
         op.filename = scene.acexport_filename
