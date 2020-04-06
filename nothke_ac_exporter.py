@@ -75,8 +75,11 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
         # make sure all objects..
         for ob in bpy.context.selected_editable_objects:
             # ..are meshes,
+            if ob.type == "EMPTY":
+                continue
+
             if ob.type != "MESH":
-                raise Exception("Object " + ob.name + " is not a valid mesh")
+                raise Exception("Object " + ob.name + " is of type " + ob.type + ", but only EMPTY and MESH are valid")
 
             # ..have at least 1 material slot,
             if not ob.material_slots:
