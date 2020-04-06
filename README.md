@@ -3,8 +3,8 @@ This script exports fbx for Assetto Corsa tracks in a single click. Created for 
 
 ## What does it exactly do?
 - Makes sure all objects are unlinked (because cloned objects (copied with alt + D) will have spurrious materials when exported to fbx)
-- TODO: Makes sure at least one material slot is present on all objects (because objects with no slots will get autocreated FBX_MATERIALs)
-- TODO: Makes sure meshes don't have more than 65k vertices (because AC works with 16bit indices)
+- Makes sure at least one material slot is present on all objects and all slots have materials assigned (because objects with no or invalid slots will get autocreated FBX_MATERIALs)
+- Makes sure meshes don't have more than 65k vertices (because AC works with 16bit indices)
 - Sets correct fbx export units and settings
 
 ### How to install
