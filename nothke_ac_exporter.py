@@ -74,24 +74,24 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
 
         # make sure all objects..
         for ob in bpy.context.selected_editable_objects:
-            #ob.active_material_index = 0
-            #bpy.context.view_layer.objects.active = ob
-            #bpy.ops.object.material_slot_remove_unused()
+            # ..are meshes,
+            if ob.type != "MESH":
+                raise Exception("Object " + ob.name + " is not a valid mesh")
 
-            # ..have at least 1 material slot:
+            # ..have at least 1 material slot,
             if not ob.material_slots:
                 raise Exception("Object " + ob.name + " has no materials!")
 
-            # .. have materials assigned to all slots
+            # ..have materials assigned to all slots,
             for slot in ob.material_slots:
                 if slot.material is None:
                     raise Exception(ob.name + " has an empty slot without assigned material")
 
-        # make sure no meshes have more than 65535 vertices
-        for ob in bpy.context.selected_editable_objects:
-            if ob.type != "MESH":
-                raise Exception("Object " + ob.name + " is not a valid mesh")
-            #print("Verts: " + str(len(ob.data.vertices)))
+            # ..are not vertexless
+            #if len(ob.data.vertices) > 0:
+                #raise Exception("Object " + ob.name + " has no vertices")
+
+            # ..don't have more than 65535 vertices
             if len(ob.data.vertices) > 65535:
                 raise Exception("Object " + ob.name + " has more than 65535 vertices")
 
