@@ -57,8 +57,10 @@ class NOTHKE_OT_ACExport(bpy.types.Operator):
         print('Found collection: ' + layerColl.name)
         bpy.context.view_layer.active_layer_collection = layerColl
 
-        # select all in collection
-        bpy.ops.object.select_same_collection(collection = collectionName)
+        # select all in collection (and child collections)
+        objs = layerColl.collection.all_objects
+        for ob in objs:
+            ob.select_set(True)
 
         # check if objects exist
         if not bpy.context.selected_objects:
